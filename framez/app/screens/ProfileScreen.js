@@ -7,8 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator
 } from 'react-native';
-import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
-import { db } from '../services/firebaseConfig';
+import { supabase } from '../services/supabaseConfig';
 import { AuthContext } from '../context/AuthContext';
 import PostCard from '../components/PostCard';
 
@@ -20,23 +19,44 @@ export default function ProfileScreen() {
   useEffect(() => {
     if (!user) return;
 
-    const q = query(
-      collection(db, 'posts'), 
-      where('userId', '==', user.uid),
-      orderBy('timestamp', 'desc')
-    );
-    
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const postsData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setPosts(postsData);
-      setLoading(false);
-    });
+    fetchUserPosts();
 
-    return () => unsubscribe();
+    const subscription = supabase
+      .channel('user-posts-channel')
+      .on('postgres_changes', 
+        { 
+          event: '*', 
+          schema: 'public', 
+          table: 'posts',
+          filter: `user_id=eq.${user.id}`
+        },
+        (payload) => {
+          fetchUserPosts();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, [user]);
+
+  const fetchUserPosts = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('posts')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setPosts(data || []);
+      setLoading(false);
+    } catch (error) {
+      console.error('Error fetching user posts:', error);
+      setLoading(false);
+    }
+  };
 
   const handleLogout = () => {
     logout();
@@ -74,7 +94,7 @@ export default function ProfileScreen() {
 
       <FlatList
         data={posts}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item.id.toString()}
         renderItem={({ item }) => <PostCard post={item} />}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>

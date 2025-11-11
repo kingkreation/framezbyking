@@ -1,14 +1,6 @@
 import React, { createContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { 
-  createUserWithEmailAndPassword, 
-  signInWithEmailAndPassword, 
-  signOut, 
-  onAuthStateChanged,
-  updateProfile
-} from 'firebase/auth';
-import { auth, db } from '../services/firebaseConfig';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { supabase } from '../services/supabaseConfig';
 
 export const AuthContext = createContext();
 
@@ -17,12 +9,24 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
-        const userData = userDoc.exists() ? userDoc.data() : {};
-        setUser({ ...firebaseUser, ...userData });
-        await AsyncStorage.setItem('user', JSON.stringify(firebaseUser));
+    checkUser();
+
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user) {
+        const { data: userData } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+        
+        const fullUser = {
+          ...session.user,
+          ...userData,
+          displayName: userData?.name || session.user.email
+        };
+        
+        setUser(fullUser);
+        await AsyncStorage.setItem('user', JSON.stringify(fullUser));
       } else {
         setUser(null);
         await AsyncStorage.removeItem('user');
@@ -30,33 +34,61 @@ export const AuthProvider = ({ children }) => {
       setLoading(false);
     });
 
-    checkStoredUser();
-    return unsubscribe;
+    return () => {
+      authListener?.subscription?.unsubscribe();
+    };
   }, []);
 
-  const checkStoredUser = async () => {
+  const checkUser = async () => {
     try {
-      const storedUser = await AsyncStorage.getItem('user');
-      if (storedUser) {
-        const parsedUser = JSON.parse(storedUser);
-        setUser(parsedUser);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        const { data: userData } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+        
+        const fullUser = {
+          ...session.user,
+          ...userData,
+          displayName: userData?.name || session.user.email
+        };
+        setUser(fullUser);
       }
+      setLoading(false);
     } catch (error) {
-      console.log('Error checking stored user:', error);
+      console.log('Error checking user:', error);
+      setLoading(false);
     }
   };
 
   const register = async (email, password, name) => {
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      await updateProfile(userCredential.user, { displayName: name });
-      
-      await setDoc(doc(db, 'users', userCredential.user.uid), {
-        uid: userCredential.user.uid,
-        name: name,
-        email: email,
-        createdAt: new Date().toISOString()
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            name: name
+          }
+        }
       });
+
+      if (authError) throw authError;
+
+      const { error: profileError } = await supabase
+        .from('users')
+        .insert([
+          {
+            id: authData.user.id,
+            name: name,
+            email: email,
+            created_at: new Date().toISOString()
+          }
+        ]);
+
+      if (profileError) throw profileError;
 
       return { success: true };
     } catch (error) {
@@ -66,7 +98,12 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (error) throw error;
       return { success: true };
     } catch (error) {
       return { success: false, error: error.message };
@@ -75,7 +112,7 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     try {
-      await signOut(auth);
+      await supabase.auth.signOut();
       await AsyncStorage.removeItem('user');
       setUser(null);
     } catch (error) {

@@ -13,10 +13,9 @@ import {
   Platform
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { collection, addDoc } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { db, storage } from '../services/firebaseConfig';
+import { supabase } from '../services/supabaseConfig';
 import { AuthContext } from '../context/AuthContext';
+import { decode } from 'base64-arraybuffer';
 
 export default function CreatePostScreen({ navigation }) {
   const [content, setContent] = useState('');
@@ -45,14 +44,30 @@ export default function CreatePostScreen({ navigation }) {
   };
 
   const uploadImage = async (uri) => {
-    const response = await fetch(uri);
-    const blob = await response.blob();
-    const filename = `posts/${user.uid}_${Date.now()}.jpg`;
-    const storageRef = ref(storage, filename);
-    
-    await uploadBytes(storageRef, blob);
-    const url = await getDownloadURL(storageRef);
-    return url;
+    try {
+      const response = await fetch(uri);
+      const blob = await response.blob();
+      const arrayBuffer = await new Response(blob).arrayBuffer();
+      const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+      
+      const filename = `${user.id}_${Date.now()}.jpg`;
+      const { data, error } = await supabase.storage
+        .from('posts')
+        .upload(filename, decode(base64), {
+          contentType: 'image/jpeg'
+        });
+
+      if (error) throw error;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('posts')
+        .getPublicUrl(filename);
+
+      return publicUrl;
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      throw error;
+    }
   };
 
   const handlePost = async () => {
@@ -68,13 +83,19 @@ export default function CreatePostScreen({ navigation }) {
         imageUrl = await uploadImage(image);
       }
 
-      await addDoc(collection(db, 'posts'), {
-        userId: user.uid,
-        authorName: user.displayName || user.email,
-        content: content,
-        imageUrl: imageUrl,
-        timestamp: new Date().toISOString(),
-      });
+      const { error } = await supabase
+        .from('posts')
+        .insert([
+          {
+            user_id: user.id,
+            author_name: user.displayName || user.email,
+            content: content,
+            image_url: imageUrl,
+            created_at: new Date().toISOString(),
+          }
+        ]);
+
+      if (error) throw error;
 
       setContent('');
       setImage(null);
@@ -82,7 +103,7 @@ export default function CreatePostScreen({ navigation }) {
       navigation.navigate('Feed');
     } catch (error) {
       console.error('Error creating post:', error);
-      Alert.alert('Error', 'Failed to create post');
+      Alert.alert('Error', 'Failed to create post: ' + error.message);
     } finally {
       setLoading(false);
     }

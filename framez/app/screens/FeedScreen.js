@@ -7,8 +7,7 @@ import {
   RefreshControl,
   ActivityIndicator
 } from 'react-native';
-import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
-import { db } from '../services/firebaseConfig';
+import { supabase } from '../services/supabaseConfig';
 import PostCard from '../components/PostCard';
 
 export default function FeedScreen() {
@@ -17,23 +16,44 @@ export default function FeedScreen() {
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
-    const q = query(collection(db, 'posts'), orderBy('timestamp', 'desc'));
-    
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const postsData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setPosts(postsData);
+    fetchPosts();
+
+    const subscription = supabase
+      .channel('posts-channel')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'posts' },
+        (payload) => {
+          fetchPosts();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  const fetchPosts = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('posts')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setPosts(data || []);
       setLoading(false);
       setRefreshing(false);
-    });
-
-    return () => unsubscribe();
-  }, []);
+    } catch (error) {
+      console.error('Error fetching posts:', error);
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
 
   const onRefresh = () => {
     setRefreshing(true);
+    fetchPosts();
   };
 
   if (loading) {
@@ -51,7 +71,7 @@ export default function FeedScreen() {
       </View>
       <FlatList
         data={posts}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item.id.toString()}
         renderItem={({ item }) => <PostCard post={item} />}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />

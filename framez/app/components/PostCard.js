@@ -8,12 +8,12 @@ export default function PostCard({ post }) {
       <View style={styles.header}>
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>
-            {post.authorName?.charAt(0).toUpperCase() || 'U'}
+            {post.author_name?.charAt(0).toUpperCase() || 'U'}
           </Text>
         </View>
         <View style={styles.headerInfo}>
-          <Text style={styles.authorName}>{post.authorName}</Text>
-          <Text style={styles.timestamp}>{timeAgo(post.timestamp)}</Text>
+          <Text style={styles.authorName}>{post.author_name}</Text>
+          <Text style={styles.timestamp}>{timeAgo(post.created_at)}</Text>
         </View>
       </View>
 
@@ -21,9 +21,9 @@ export default function PostCard({ post }) {
         <Text style={styles.content}>{post.content}</Text>
       ) : null}
 
-      {post.imageUrl ? (
+      {post.image_url ? (
         <Image 
-          source={{ uri: post.imageUrl }} 
+          source={{ uri: post.image_url }} 
           style={styles.image}
           resizeMode="cover"
         />
