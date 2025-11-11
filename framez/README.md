@@ -1,15 +1,16 @@
 # Framez 📱
 
-A mobile social media application built with React Native and Firebase for Stage 4 Frontend Development Task.
+A mobile social media application built with React Native and Supabase for Stage 4 Frontend Development Task.
 
 ## Features
 
-- ✅ **User Authentication**: Secure sign-up, login, and logout using Firebase Authentication
+- ✅ **User Authentication**: Secure sign-up, login, and logout using Supabase Authentication
 - ✅ **Persistent Sessions**: Users remain logged in after closing and reopening the app
-- ✅ **Create Posts**: Share text and/or image posts
+- ✅ **Create Posts**: Share text and/or image posts  
 - ✅ **Feed**: View all posts from users in chronological order
 - ✅ **Profile**: View user information and personal posts
-- ✅ **Real-time Updates**: Posts update automatically using Firestore real-time listeners
+- ✅ **Real-time Updates**: Posts update automatically using Supabase real-time subscriptions
+- ✅ **Free Hosting**: 1GB free storage with Supabase (no credit card required!)
 
 ## Tech Stack
 
@@ -20,9 +21,9 @@ A mobile social media application built with React Native and Firebase for Stage
 - **AsyncStorage** - Persistent local storage for sessions
 
 ### Backend
-- **Firebase Authentication** - User registration and login
-- **Firestore Database** - Real-time NoSQL database for posts and user data
-- **Firebase Storage** - Cloud storage for post images
+- **Supabase Authentication** - User registration and login
+- **Supabase Database** (PostgreSQL) - Real-time database for posts and user data
+- **Supabase Storage** - Cloud storage for post images (1GB free!)
 
 ### State Management
 - **React Context API** - Global authentication state
@@ -44,7 +45,7 @@ framez/
 │   ├── context/                # React Context
 │   │   └── AuthContext.js      # Authentication context
 │   ├── services/               # External services
-│   │   └── firebaseConfig.js   # Firebase configuration
+│   │   └── supabaseConfig.js   # Supabase configuration
 │   ├── utils/                  # Utility functions
 │   │   └── timeAgo.js          # Format timestamps
 │   └── navigation/             # Navigation setup
@@ -75,63 +76,116 @@ framez/
    npm install
    ```
 
-3. **Configure Firebase**
+3. **Configure Supabase**
    
-   a. Create a Firebase project at [Firebase Console](https://console.firebase.google.com/)
+   a. Create a Supabase project at [Supabase Dashboard](https://app.supabase.com/)
    
-   b. Enable the following services:
-      - Authentication (Email/Password provider)
-      - Firestore Database
-      - Storage
+   b. Get your project credentials:
+      - Go to Project Settings > API
+      - Copy your **Project URL** and **anon/public key**
    
-   c. Get your Firebase configuration from Project Settings
-   
-   d. Update `app/services/firebaseConfig.js` with your credentials:
+   c. Update `app/services/supabaseConfig.js` with your credentials:
    ```javascript
-   const firebaseConfig = {
-     apiKey: "YOUR_API_KEY",
-     authDomain: "YOUR_AUTH_DOMAIN",
-     projectId: "YOUR_PROJECT_ID",
-     storageBucket: "YOUR_STORAGE_BUCKET",
-     messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-     appId: "YOUR_APP_ID"
-   };
+   const supabaseUrl = 'YOUR_SUPABASE_URL';
+   const supabaseAnonKey = 'YOUR_SUPABASE_ANON_KEY';
    ```
 
-4. **Set up Firestore Security Rules**
+4. **Set up Database Tables**
    
-   In Firebase Console > Firestore Database > Rules, add:
-   ```javascript
-   rules_version = '2';
-   service cloud.firestore {
-     match /databases/{database}/documents {
-       match /users/{userId} {
-         allow read: if request.auth != null;
-         allow write: if request.auth != null && request.auth.uid == userId;
-       }
-       match /posts/{postId} {
-         allow read: if request.auth != null;
-         allow create: if request.auth != null;
-         allow update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
-       }
-     }
-   }
+   In Supabase Dashboard > SQL Editor, run these SQL commands:
+   
+   **Create users table:**
+   ```sql
+   CREATE TABLE users (
+     id uuid REFERENCES auth.users PRIMARY KEY,
+     name text NOT NULL,
+     email text NOT NULL,
+     created_at timestamp with time zone DEFAULT now()
+   );
+
+   -- Enable Row Level Security
+   ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+
+   -- Policy: Users can read any user
+   CREATE POLICY "Users can view all users"
+     ON users FOR SELECT
+     USING (true);
+
+   -- Policy: Users can only update their own data
+   CREATE POLICY "Users can update own data"
+     ON users FOR UPDATE
+     USING (auth.uid() = id);
+
+   -- Policy: Users can insert their own data
+   CREATE POLICY "Users can insert own data"
+     ON users FOR INSERT
+     WITH CHECK (auth.uid() = id);
    ```
 
-5. **Set up Storage Security Rules**
-   
-   In Firebase Console > Storage > Rules, add:
-   ```javascript
-   rules_version = '2';
-   service firebase.storage {
-     match /b/{bucket}/o {
-       match /posts/{allPaths=**} {
-         allow read: if request.auth != null;
-         allow write: if request.auth != null;
-       }
-     }
-   }
+   **Create posts table:**
+   ```sql
+   CREATE TABLE posts (
+     id bigserial PRIMARY KEY,
+     user_id uuid REFERENCES auth.users NOT NULL,
+     author_name text NOT NULL,
+     content text,
+     image_url text,
+     created_at timestamp with time zone DEFAULT now()
+   );
+
+   -- Enable Row Level Security
+   ALTER TABLE posts ENABLE ROW LEVEL SECURITY;
+
+   -- Policy: Authenticated users can read all posts
+   CREATE POLICY "Authenticated users can view all posts"
+     ON posts FOR SELECT
+     USING (auth.role() = 'authenticated');
+
+   -- Policy: Authenticated users can create posts
+   CREATE POLICY "Authenticated users can create posts"
+     ON posts FOR INSERT
+     WITH CHECK (auth.role() = 'authenticated' AND auth.uid() = user_id);
+
+   -- Policy: Users can update their own posts
+   CREATE POLICY "Users can update own posts"
+     ON posts FOR UPDATE
+     USING (auth.uid() = user_id);
+
+   -- Policy: Users can delete their own posts
+   CREATE POLICY "Users can delete own posts"
+     ON posts FOR DELETE
+     USING (auth.uid() = user_id);
    ```
+
+   **Enable Realtime for posts:**
+   ```sql
+   ALTER PUBLICATION supabase_realtime ADD TABLE posts;
+   ```
+
+5. **Set up Storage for Images**
+   
+   a. In Supabase Dashboard > Storage, create a new bucket named `posts`
+   
+   b. Make it public by clicking on the bucket > Policies > "New Policy"
+   
+   c. Use this policy for public read access:
+   ```sql
+   -- Policy: Anyone can view images
+   CREATE POLICY "Public Access"
+   ON storage.objects FOR SELECT
+   USING (bucket_id = 'posts');
+
+   -- Policy: Authenticated users can upload images
+   CREATE POLICY "Authenticated users can upload images"
+   ON storage.objects FOR INSERT
+   WITH CHECK (bucket_id = 'posts' AND auth.role() = 'authenticated');
+   ```
+
+6. **Enable Email Authentication**
+   
+   - Go to Authentication > Providers
+   - Enable Email provider
+   - Turn off "Confirm email" if you want instant signups (recommended for testing)
 
 ### Running the App
 
@@ -186,25 +240,25 @@ npm run ios
 
 ## Data Models
 
-### Users Collection
-```javascript
+### Users Table
+```sql
 {
-  uid: string,
-  name: string,
-  email: string,
-  createdAt: timestamp
+  id: uuid (references auth.users),
+  name: text,
+  email: text,
+  created_at: timestamp
 }
 ```
 
-### Posts Collection
-```javascript
+### Posts Table
+```sql
 {
-  id: string,
-  userId: string,
-  authorName: string,
-  content: string,
-  imageUrl: string | null,
-  timestamp: string (ISO 8601)
+  id: bigserial,
+  user_id: uuid (references auth.users),
+  author_name: text,
+  content: text,
+  image_url: text,
+  created_at: timestamp
 }
 ```
 
@@ -242,11 +296,30 @@ Use the QR code from `npm start` to test on physical devices
 - ✅ Navigation works smoothly
 - ✅ App runs on web
 - ✅ App runs on Android/iOS via Expo Go
+- ✅ Real-time updates work
 
-## Known Issues
+## Why Supabase?
 
-- Image upload on web may have CORS issues in production (works fine in development)
-- Some dependencies show version warnings but don't affect functionality
+- **Free tier is generous**: 1GB storage, 50MB database, unlimited API requests
+- **No credit card required** for free tier
+- **PostgreSQL database**: More powerful than NoSQL for complex queries
+- **Real-time subscriptions**: Built-in websocket support
+- **Row Level Security**: Database-level security policies
+- **Easy to use**: Simple API similar to Firebase
+
+## Troubleshooting
+
+**Issue**: "Invalid API key" error
+- **Solution**: Double-check your Supabase URL and anon key in `supabaseConfig.js`
+
+**Issue**: Can't create posts
+- **Solution**: Make sure you've created the database tables and enabled RLS policies
+
+**Issue**: Images not uploading
+- **Solution**: Check that the `posts` storage bucket exists and has the correct policies
+
+**Issue**: Real-time updates not working
+- **Solution**: Run the `ALTER PUBLICATION` command to enable realtime for the posts table
 
 ## Future Enhancements
 
@@ -258,10 +331,11 @@ Use the QR code from `npm start` to test on physical devices
 - Add push notifications
 - Add user search
 - Add follow/unfollow functionality
+- Add direct messaging
 
 ## Credits
 
-Built by [Your Name] for Stage 4 Frontend Development Task
+Built for Stage 4 Frontend Development Task
 
 ## License
 
