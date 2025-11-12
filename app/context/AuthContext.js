@@ -19,7 +19,7 @@ export const AuthProvider = ({ children }) => {
     };
     init();
 
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
       setSession(newSession);
       if (newSession?.user) {
         await fetchProfile(newSession.user.id);
@@ -28,7 +28,7 @@ export const AuthProvider = ({ children }) => {
       }
     });
     return () => {
-      authListener.subscription?.unsubscribe();
+      subscription?.unsubscribe();
     };
   }, []);
 
