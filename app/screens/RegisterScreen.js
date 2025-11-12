@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useForm, Controller } from 'react-hook-form';
 import useAuth from '../hooks/useAuth';
+import { colors, spacing } from '../theme';
 
 export default function RegisterScreen() {
   const { signUp } = useAuth();
@@ -55,9 +56,9 @@ export default function RegisterScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, justifyContent: 'center' },
-  title: { fontSize: 24, fontWeight: '700', marginBottom: 24, textAlign: 'center' },
-  input: { borderWidth: 1, borderColor: '#ddd', borderRadius: 8, padding: 12, marginBottom: 12 },
-  button: { backgroundColor: '#000', padding: 14, borderRadius: 8, alignItems: 'center' },
+  container: { flex: 1, padding: spacing.lg, justifyContent: 'center', backgroundColor: colors.background },
+  title: { fontSize: 26, fontWeight: '800', marginBottom: spacing.xl, textAlign: 'center', color: colors.primary },
+  input: { borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: spacing.md, marginBottom: spacing.sm, backgroundColor: colors.card },
+  button: { backgroundColor: colors.primary, padding: spacing.md, borderRadius: 12, alignItems: 'center' },
   buttonText: { color: '#fff', fontWeight: '700' },
 });

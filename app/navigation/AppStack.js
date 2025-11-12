@@ -1,5 +1,7 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Text } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { colors } from '../theme';
 import FeedScreen from '../screens/FeedScreen';
 import CreatePostScreen from '../screens/CreatePostScreen';
 import ProfileScreen from '../screens/ProfileScreen';
@@ -8,17 +10,23 @@ const Stack = createNativeStackNavigator();
 
 export default function AppStack() {
   return (
-    <Stack.Navigator>
+    <Stack.Navigator
+      screenOptions={{
+        headerStyle: { backgroundColor: colors.primary },
+        headerTintColor: '#fff',
+        headerTitleStyle: { fontWeight: '700' },
+      }}
+    >
       <Stack.Screen
         name="Feed"
         component={FeedScreen}
         options={({ navigation }) => ({
           title: 'Framez',
           headerRight: () => (
-            <Text style={{ color: '#007AFF', fontWeight: '700' }} onPress={() => navigation.navigate('CreatePost')}>New</Text>
+            <Ionicons name="add-outline" size={24} color="#fff" onPress={() => navigation.navigate('CreatePost')} />
           ),
           headerLeft: () => (
-            <Text style={{ color: '#007AFF', fontWeight: '700' }} onPress={() => navigation.navigate('Profile')}>Me</Text>
+            <Ionicons name="person-circle-outline" size={24} color="#fff" onPress={() => navigation.navigate('Profile')} />
           ),
         })}
       />

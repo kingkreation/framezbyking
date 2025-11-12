@@ -1,5 +1,6 @@
 import { Image, StyleSheet, Text, View } from 'react-native';
 import { timeAgo } from '../utils/timeAgo';
+import { colors, spacing, shadow } from '../theme';
 
 export default function PostCard({ post }) {
   return (
@@ -18,20 +19,21 @@ export default function PostCard({ post }) {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#fff',
-    borderColor: '#eee',
+    backgroundColor: colors.card,
+    borderColor: colors.border,
     borderWidth: 1,
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 12,
+    borderRadius: 12,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    ...shadow.card,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
-  author: { fontWeight: '600', fontSize: 14 },
-  timestamp: { color: '#777', fontSize: 12 },
-  content: { marginBottom: 8, fontSize: 14 },
-  image: { width: '100%', height: 200, borderRadius: 8, backgroundColor: '#f2f2f2' },
+  author: { fontWeight: '700', fontSize: 14, color: colors.primary },
+  timestamp: { color: colors.muted, fontSize: 12 },
+  content: { marginBottom: spacing.sm, fontSize: 15, color: colors.text },
+  image: { width: '100%', height: 200, borderRadius: 10, backgroundColor: '#f2f2f2' },
 });

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, RefreshControl, SafeAreaView, StyleSheet, View } from 'react-native';
+import { colors, spacing } from '../theme';
 import { supabase } from '../services/supabaseClient';
 import PostCard from '../components/PostCard';
 import { useIsFocused } from '@react-navigation/native';
@@ -36,7 +37,7 @@ export default function FeedScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.container}>
       {loading ? (
-        <View style={styles.loader}><ActivityIndicator size="large" /></View>
+        <View style={styles.loader}><ActivityIndicator size="large" color={colors.primary} /></View>
       ) : (
         <FlatList
           data={posts}
@@ -51,7 +52,7 @@ export default function FeedScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: { flex: 1, backgroundColor: colors.background },
   loader: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  list: { padding: 16 },
+  list: { padding: spacing.lg },
 });

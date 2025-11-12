@@ -3,6 +3,7 @@ import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-nativ
 import useAuth from '../hooks/useAuth';
 import { supabase } from '../services/supabaseClient';
 import PostCard from '../components/PostCard';
+import { colors, spacing } from '../theme';
 
 export default function ProfileScreen() {
   const { profile, user, signOut } = useAuth();
@@ -34,14 +35,14 @@ export default function ProfileScreen() {
         <Text style={styles.logout} onPress={signOut}>Logout</Text>
       </View>
       {loading ? (
-        <View style={styles.loader}><ActivityIndicator size="large" /></View>
+        <View style={styles.loader}><ActivityIndicator size="large" color={colors.primary} /></View>
       ) : (
         <FlatList
           data={posts}
           keyExtractor={(item) => item.id?.toString()}
           renderItem={({ item }) => <PostCard post={item} />}
           contentContainerStyle={styles.list}
-          ListEmptyComponent={<Text style={{ textAlign: 'center', color: '#777' }}>No posts yet</Text>}
+          ListEmptyComponent={<Text style={styles.empty}>No posts yet</Text>}
         />
       )}
     </View>
@@ -49,19 +50,21 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: { flex: 1, backgroundColor: colors.background },
   header: {
     height: 72,
-    paddingHorizontal: 16,
+    paddingHorizontal: spacing.lg,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: colors.border,
+    backgroundColor: colors.card,
   },
-  name: { fontSize: 18, fontWeight: '700' },
-  email: { fontSize: 12, color: '#777' },
-  logout: { color: '#FF3B30', fontWeight: '700' },
+  name: { fontSize: 18, fontWeight: '800', color: colors.text },
+  email: { fontSize: 12, color: colors.muted },
+  logout: { color: colors.danger, fontWeight: '700' },
   loader: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  list: { padding: 16 },
+  list: { padding: spacing.lg },
+  empty: { textAlign: 'center', color: colors.muted, marginTop: spacing.xl },
 });
