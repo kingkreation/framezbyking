@@ -1,29 +1,38 @@
 {
-  "expo": {
-    "name": "framez",
-    "slug": "framez",
-    "version": "1.0.0",
-    "orientation": "portrait",
-    "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
-    "newArchEnabled": true,
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
+  "name": "framez",
+  "slug": "framez",
+  "version": "1.0.0",
+  "orientation": "portrait",
+  "icon": "./assets/icon.png",
+  "userInterfaceStyle": "light",
+  "newArchEnabled": true,
+  "splash": {
+    "image": "./assets/splash-icon.png",
+    "resizeMode": "contain",
+    "backgroundColor": "#ffffff"
+  },
+  "ios": {
+    "supportsTablet": true
+  },
+  "android": {
+    "adaptiveIcon": {
+      "foregroundImage": "./assets/adaptive-icon.png",
       "backgroundColor": "#ffffff"
     },
-    "ios": {
-      "supportsTablet": true
-    },
-    "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
-      },
-      "edgeToEdgeEnabled": true
-    },
-    "web": {
-      "favicon": "./assets/favicon.png"
+    "edgeToEdgeEnabled": true
+  },
+  "web": {
+    "favicon": "./assets/favicon.png"
+  },
+  "sdkVersion": "54.0.0",
+  "platforms": [
+    "ios",
+    "android",
+    "web"
+  ],
+  "extra": {
+    "eas": {
+      "projectId": "cbe711fc-a330-4594-b33e-a6e0d79d6d29"
     }
   }
 }
