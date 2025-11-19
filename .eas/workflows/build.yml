@@ -1,0 +1,24 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build_android:
+    name: Build Android App
+    type: build
+    workingDirectory: framez
+    env:
+      JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
+    params:
+      platform: android
+      profile: production
+  build_ios:
+    name: Build iOS App
+    type: build
+    workingDirectory: framez
+    params:
+      platform: ios
+      profile: production

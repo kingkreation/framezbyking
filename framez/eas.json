@@ -4,6 +4,8 @@
   },
   "build": {
     "production": {
+      "autoIncrement": true,
+      "channel": "production",
       "android": {
         "buildType": "app-bundle"
       }
