@@ -14,11 +14,4 @@ jobs:
       JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
     params:
       platform: android
-      profile: production
-  build_ios:
-    name: Build iOS App
-    type: build
-    workingDirectory: framez
-    params:
-      platform: ios
-      profile: production
+      profile: preview
